@@ -66,6 +66,8 @@ class _MyHomePageState extends State<MyHomePage> {
           new RaisedButton(onPressed: ()=>play(2, 3,5,15), child: new Text("Level 4")),
           new RaisedButton(onPressed: ()=>play(3,-1,1,10), child: new Text("Level 5")),
           new RaisedButton(onPressed: ()=>play(3, 4,1,10), child: new Text("Level 6")),
+          new RaisedButton(onPressed: ()=>play(4,-1,1,15), child: new Text("Level 7")),
+          new RaisedButton(onPressed: ()=>play(4, 4,1,15), child: new Text("Level 8")),
         ],));
 
   }
@@ -94,7 +96,6 @@ class GamePage extends StatefulWidget {
       return "Nim: Subtract as much as you want";
   }
 
-
   @override
   _GamePageState createState() => new _GamePageState(this.numPiles, this.maxSub, this.minDraw, this.maxDraw);
 }
@@ -120,8 +121,10 @@ class _GamePageState extends State<GamePage> {
 
   void sub(int i) {
     setState(() {
-      curVals[i]--;
-      active=i;
+      if(curVals[i]>0 && (maxSub==-1 || history[i]-curVals[i] < maxSub)) {
+        curVals[i]--;
+        active = i;
+      }
     });
   }
 
@@ -178,7 +181,7 @@ class _GamePageState extends State<GamePage> {
       active = -1;
       sc.jumpTo(0);
       if(curVals.reduce(max)==0) {
-        message="You win!";
+        _showResult("You win!", "Well done");
         finished=true;
       }
     });
@@ -195,8 +198,7 @@ class _GamePageState extends State<GamePage> {
       history = hist2;
       active = -1;
       if (curVals.reduce(max) == 0) {
-        message = "You lose!";
-        return;
+        _showResult("You lose!", "Better luck next time");
       }
       sc.jumpTo(0);
     });
@@ -232,6 +234,45 @@ class _GamePageState extends State<GamePage> {
     });
   }
 
+  Widget _makeLVRow(List<Widget> rowChildren) {
+    return new IntrinsicHeight(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: rowChildren));
+  }
+
+  String i2s2D(int x) {
+    String r = x.toString();
+    if(x<10)
+      //r='0'+r;
+      r='\u{a0}'+r;
+    return r;
+  }
+
+  Future<void> _showResult(String message1, String message2) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(message1),
+          content: SingleChildScrollView(
+            child: Text(message2)
+            ),
+          actions: <Widget>[
+            FlatButton(
+              child: Text('Restart'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                restartGameAction();
+            }
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     TextStyle style = new TextStyle(fontSize: 20.0);
@@ -239,39 +280,34 @@ class _GamePageState extends State<GamePage> {
 
     List<Widget> childList = [];
 
-    List<Widget> gridChildren=[];
+    List<Widget> lvChildren=[];
+    List<Widget> row0=[];
     for(int vi =0; vi<numPiles; vi++) {
       int v=curVals[vi];
       bool isActive=(active==-1) || (active==vi);
       bool canSub=isActive && v>0 && (history[vi]-v!=maxSub);
       bool canAdd=active==vi;
-      gridChildren.add(new Row(children: <Widget>[
-        new Expanded(child:new Container()),
-        new IconButton(icon: new Icon(Icons.remove), onPressed: canSub? (()=>sub(vi)) : null),
-        new Text(v.toString(), style: style,),
-        new IconButton(icon: new Icon(Icons.add), onPressed: canAdd? (()=>add(vi)) : null),
-        new Expanded(child:new Container()),
-      ]));
+      row0.add(new FlatButton(child: Text(i2s2D(v), style: style), onPressed: canSub? (()=>sub(vi)) : null));
     }
-    for(int hi=0; hi<history.length; hi++) {
-      int h=history[hi];
-      int rowNum=hi~/numPiles;
-      TextStyle currentStyle = (rowNum%2==0) ? style2 : style;
-        gridChildren.add(new Row(children: <Widget>[
-          new Expanded(child:new Container()),
-          new Text(h.toString(), style: currentStyle,),
-          new Expanded(child:new Container()),
-        ]));
+    lvChildren.add(_makeLVRow(row0));
+
+    for(int hi=0; hi<history.length; hi+=numPiles) {
+      List<Widget> curRow=[];
+      for(int hi2=hi; hi2<hi+numPiles; hi2++) {
+        int h = history[hi2];
+        int rowNum = hi;
+        TextStyle currentStyle = (rowNum % 2 == 0) ? style2 : style;
+        curRow.add(new Text(i2s2D(h), style: currentStyle,));
+      }
+      lvChildren.add(_makeLVRow(curRow));
     }
+
     if(message!=null) {
       childList.add(new Text(message, style:style));
     }
-    childList.add(new Flexible(child:new GridView.count(
-      crossAxisCount: numPiles,
-      children: gridChildren,
-      childAspectRatio: 15/numPiles,
-      controller: sc,
-      reverse: true,)));
+
+    childList.add(new ListView(children: lvChildren, shrinkWrap: true, controller: sc, reverse: true));
+
     Widget lastButton;
     if(firstTurn)
       lastButton = new RaisedButton(child: new Text("Pass"), onPressed: active==-1 ? playOpp : null,);
@@ -292,6 +328,6 @@ class _GamePageState extends State<GamePage> {
         body: Center(
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
-        child: Column(children: childList)));
+        child: Column(children: childList, mainAxisAlignment: MainAxisAlignment.end)));
   }
 }
