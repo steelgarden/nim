@@ -235,10 +235,13 @@ class _GamePageState extends State<GamePage> {
   }
 
   Widget _makeLVRow(List<Widget> rowChildren) {
+    List<Widget> children2=List.from(rowChildren.map((x)=>new Expanded(child:
+        new Align(child:x, alignment: Alignment.center))));
+    //children2.add(new Expanded(child: new Container()));
     return new IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: rowChildren));
+        children: children2));
   }
 
   String i2s2D(int x) {
@@ -291,12 +294,11 @@ class _GamePageState extends State<GamePage> {
     }
     lvChildren.add(_makeLVRow(row0));
 
-    for(int hi=0; hi<history.length; hi+=numPiles) {
+    for(int row=0; row*numPiles<history.length; row++) {
       List<Widget> curRow=[];
-      for(int hi2=hi; hi2<hi+numPiles; hi2++) {
-        int h = history[hi2];
-        int rowNum = hi;
-        TextStyle currentStyle = (rowNum % 2 == 0) ? style2 : style;
+      for(int hi=row*numPiles; hi<(row+1)*numPiles; hi++) {
+        int h = history[hi];
+        TextStyle currentStyle = (row % 2 == 0) ? style2 : style;
         curRow.add(new Text(i2s2D(h), style: currentStyle,));
       }
       lvChildren.add(_makeLVRow(curRow));
